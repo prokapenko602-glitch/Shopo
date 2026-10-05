@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Игровой Магазин</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>📦 Магазин предметов</h1>
+        <div id="catalog" class="catalog">
+            <!-- Сюда динамически добавятся товары -->
+        </div>
+
+        <div class="cart-section">
+            <h2>🛒 Ваша корзина</h2>
+            <div id="cart-items">Корзина пуста</div>
+            <button id="checkout-btn" class="checkout-btn" disabled>Оформить заказ</button>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Разворачиваем на весь экран
+
+        // Список ваших товаров (можете заменить на свои названия)
+        const products = [
+            { id: 1, name: "💊 Топовые ресурсы (набор)", price: "1 шт" },
+            { id: 2, name: "🛡️ Броня и экипировка", price: "1 шт" },
+            { id: 3, name: "🔧 Набор компонентов", price: "1 шт" }
+        ];
+
+        let cart = {};
+
+        function renderCatalog() {
+            const catalogEl = document.getElementById('catalog');
+            catalogEl.innerHTML = '';
+            products.forEach(product => {
+                const count = cart[product.id] || 0;
+                catalogEl.innerHTML += `
+                    <div class="product-card">
+                        <h3>${product.name}</h3>
+                        <div class="counter">
+                            <button onclick="changeQty(${product.id}, -1)">-</button>
+                            <span>${count}</span>
+                            <button onclick="changeQty(${product.id}, 1)">+</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function changeQty(productId, delta) {
+            if (!cart[productId]) cart[productId] = 0;
+            cart[productId] += delta;
+            if (cart[productId] <= 0) delete cart[productId];
+            renderCatalog();
+            renderCart();
+        }
+
+        function renderCart() {
+            const cartItemsEl = document.getElementById('cart-items');
+            const checkoutBtn = document.getElementById('checkout-btn');
+            const keys = Object.keys(cart);
+
+            if (keys.length === 0) {
+                cartItemsEl.innerHTML = 'Корзина пуста';
+                checkoutBtn.disabled = true;
+                return;
+            }
+
+            let html = '';
+            keys.forEach(id => {
+                const product = products.find(p => p.id == id);
+                html += `<div class="cart-item"><span>${product.name}</span> <b>${cart[id]} шт.</b></div>`;
+            });
+            cartItemsEl.innerHTML = html;
+            checkoutBtn.disabled = false;
+        }
+
+        document.getElementById('checkout-btn').addEventListener('click', () => {
+            const orderData = {
+                items: Object.keys(cart).map(id => {
+                    const product = products.find(p => p.id == id);
+                    return { name: product.name, quantity: cart[id] };
+                })
+            };
+            // Отправляем данные боту в Telegram
+            tg.sendData(JSON.stringify(orderData));
+            tg.close();
+        });
+
+        renderCatalog();
+    </script>
+</body>
+</html>
